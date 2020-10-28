@@ -1,26 +1,184 @@
-import React from 'react';
-import logo from './logo.svg';
+
+import React, { useRef, useState, useEffect } from 'react';
 import './App.css';
 
+import firebase from 'firebase';
+import 'firebase/firestore';
+import 'firebase/auth';
+import 'firebase/analytics';
+
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { useCollectionData } from 'react-firebase-hooks/firestore';
+
+firebase.initializeApp({
+  apiKey: "AIzaSyDstGsJQrWRieNmcr9V8mr_DYd93PfTtkw",
+  authDomain: "polifacetic-75658.firebaseapp.com",
+  databaseURL: "https://polifacetic-75658.firebaseio.com",
+  projectId: "polifacetic-75658",
+  storageBucket: "polifacetic-75658.appspot.com",
+  messagingSenderId: "193059493226",
+  appId: "1:193059493226:web:b20298ff2e64e8ec3fc113"
+})
+const auth = firebase.auth();
+const firestore = firebase.firestore();
+const analytics = firebase.analytics();
+const storage = firebase.storage();
+
+
 function App() {
+
+  const [user] = useAuthState(auth);
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
+      <header className="header">
+        <h4>Polifacetic secret Chat😈😈</h4>
+        <SignOut />
       </header>
+
+      <section>
+        {user ? <ChatRoom /> : <SignIn />}
+      </section>
+
     </div>
   );
 }
+
+function SignIn() {
+
+  const signInWithGoogle = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
+  }
+
+  return (
+    <>
+      <button className="sign-in" onClick={signInWithGoogle}>Sign in with Google</button>
+      <center><p>Hello madafaca</p></center>
+    </>
+  )
+
+}
+
+function SignOut() {
+  return auth.currentUser && (
+    <button className="sign-out" onClick={() => auth.signOut()}>Sign Out</button>
+  )
+}
+
+
+function ChatRoom() {
+  const dummy = useRef();
+  const messagesRef = firestore.collection('messages');
+  const query = messagesRef.orderBy('createdAt');
+
+  const [messages] = useCollectionData(query, { idField: 'id' });
+  const [imageUrl, setImageUrl] = useState();
+
+  const [formValue, setFormValue] = useState('');
+
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
+
+    const { uid, photoURL, displayName, email } = auth.currentUser;
+
+
+    await messagesRef.add({
+      text: formValue,
+      displayName,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      uid,
+      email,
+      photoURL
+    })
+
+    setFormValue('');
+    
+  }
+
+
+  useEffect(() => {
+    document.querySelector('.chatRoom').scrollTop = document.querySelector('.chatRoom').scrollHeight;
+  }, [messagesRef])
+
+  const handleChange = async (e)  => {
+    if (e.target.files[0]) {
+      var image = e.target.files[0]
+      console.log("aqui",image);
+      var imageUrl = "";
+      var datenow = Date.now() + image.name;
+      const uploadTask = storage.ref(`images/${datenow}`).put(image);
+
+      const { uid, photoURL, displayName, email } = auth.currentUser;
+  
+
+      const ref = firebase.storage().ref(`images/${datenow}`);
+      const url = ref.getDownloadURL()
+      .then(url => {console.log(url)})
+      .catch(e=>{console.log(e);})
+      await messagesRef.add({
+        displayName,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        uid,
+        email,
+        photoURL,
+        image: url
+      })
+
+     
+    }
+  };
+
+  return (<>
+    <main className="chatRoom">
+
+      {messages && messages.map(msg => <ChatMessage key={msg.id} message={msg} />)}
+
+      <span ref={dummy}></span>
+
+    </main>
+
+    <form onSubmit={sendMessage} className="form-f">
+
+      <input value={formValue} onChange={(e) => setFormValue(e.target.value)} placeholder="Ditte argo" />
+
+      <button type="submit" disabled={!formValue} className="button-send">🤘</button>
+      <label for="img-file" className="labelimage">🖼</label>
+      <input type="file" onChange={handleChange} id="img-file" className="inputfileimg"></input>
+    </form>
+  </>)
+}
+
+
+function ChatMessage(props) {
+  const { text, uid, photoURL, createdAt, displayName, email } = props.message;
+
+  const messageClass = uid === auth.currentUser.uid ? 'sent' : 'received';
+  var humanDateFormat = ""
+  if(createdAt != undefined){
+    const dateObject = new Date(createdAt.seconds * 1000)
+     humanDateFormat = dateObject.toLocaleString() 
+  }
+  var name = "El de la foto";
+  if(displayName != undefined){
+    name = displayName;
+  }else{
+    if(email != undefined)
+      name = email;
+  }
+  return (<>
+    <div className={`message ${messageClass}`}>
+      
+      <img src={photoURL || 'https://api.adorable.io/avatars/23/abott@adorable.png'} />
+      <div >
+      
+        <p className="msg"><span className="username">{name}</span><span>{text}</span>  <span className={`time time${messageClass}`}>{humanDateFormat}</span></p>
+        
+      </div>
+    </div>
+  </>)
+}
+
 
 export default App;
