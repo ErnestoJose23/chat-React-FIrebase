@@ -197,3 +197,10 @@ p span {
   margin-top: auto;
   margin-bottom: auto;
 }
+
+.img-chat {
+  width: 250px;
+  height: auto;
+  border-radius: 0%;
+  margin: 2px 5px;
+}

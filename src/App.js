@@ -105,25 +105,23 @@ function ChatRoom() {
   const handleChange = async (e)  => {
     if (e.target.files[0]) {
       var image = e.target.files[0]
-      console.log("aqui",image);
-      var imageUrl = "";
+    
       var datenow = Date.now() + image.name;
-      const uploadTask = storage.ref(`images/${datenow}`).put(image);
 
       const { uid, photoURL, displayName, email } = auth.currentUser;
   
 
-      const ref = firebase.storage().ref(`images/${datenow}`);
-      const url = ref.getDownloadURL()
-      .then(url => {console.log(url)})
-      .catch(e=>{console.log(e);})
+      const ref = firebase.storage().ref(`images/${datenow}`).put(image);
+
+     
+
       await messagesRef.add({
         displayName,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         uid,
         email,
         photoURL,
-        image: url
+        image: datenow
       })
 
      
@@ -152,8 +150,8 @@ function ChatRoom() {
 
 
 function ChatMessage(props) {
-  const { text, uid, photoURL, createdAt, displayName, email } = props.message;
-
+  const { text, uid, photoURL, createdAt, displayName, email, image } = props.message;
+  var imageUrl = "";
   const messageClass = uid === auth.currentUser.uid ? 'sent' : 'received';
   var humanDateFormat = ""
   if(createdAt != undefined){
@@ -161,19 +159,25 @@ function ChatMessage(props) {
      humanDateFormat = dateObject.toLocaleString() 
   }
   var name = "El de la foto";
+
   if(displayName != undefined){
     name = displayName;
   }else{
     if(email != undefined)
       name = email;
   }
+  if(image != undefined){
+    imageUrl = "https://firebasestorage.googleapis.com/v0/b/polifacetic-75658.appspot.com/o/images%2F"+image+"?alt=media&token=a13925cc-270a-43e0-bced-6c3a299fdfa2";
+  }
+  console.log("asdasd",imageUrl)
+  
   return (<>
     <div className={`message ${messageClass}`}>
       
       <img src={photoURL || 'https://api.adorable.io/avatars/23/abott@adorable.png'} />
       <div >
       
-        <p className="msg"><span className="username">{name}</span><span>{text}</span>  <span className={`time time${messageClass}`}>{humanDateFormat}</span></p>
+        <p className="msg"><span className="username">{name}</span>{image  ? <img src={imageUrl} class="img-chat"/> : <span>{text}</span> } <span className={`time time${messageClass}`}>{humanDateFormat}</span></p>
         
       </div>
     </div>
